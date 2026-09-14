@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
@@ -18,6 +18,10 @@ load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
+
+# Frontend directory
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
 
 FIRMS_MAP_KEY = os.getenv("FIRMS_MAP_KEY")
 
@@ -90,42 +94,7 @@ def get_movement_speed(storm):
 
 @app.route("/")
 def home():
-
-    return jsonify({
-
-        "service": "Space Disaster System",
-
-        "source": [
-            "NASA FIRMS",
-            "USGS Earthquakes",
-            "Open-Meteo Weather"
-        ],
-
-        "status": "running",
-
-        "endpoints": {
-
-            "fire_events":
-                "/api/fire-events",
-
-            "earthquakes":
-                "/api/earthquakes",
-
-            "cyclones":
-                "/api/cyclones",
-
-            "weather":
-                "/api/weather",
-
-            "disasters":
-                "/api/disasters",
-
-            "health":
-                "/api/health"
-
-        }
-
-    })
+    return send_from_directory(FRONTEND_DIR, "disaster-map.html")
 
 
 # ============================================================
@@ -1735,7 +1704,7 @@ if __name__ == "__main__":
 
         host="0.0.0.0",
 
-        port=5000,
+        port=int(os.environ.get("PORT", 5000)),
 
         debug=True
 
