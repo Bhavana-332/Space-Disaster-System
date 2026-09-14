@@ -1,0 +1,3070 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0">
+
+    <title>
+        Space Disaster System | Global Monitoring
+    </title>
+
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: #070b14;
+            color: white;
+            min-height: 100vh;
+        }
+
+        header {
+            height: 70px;
+            background: #0d1424;
+            border-bottom: 1px solid #202a3d;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            padding: 0 25px;
+        }
+
+        .logo {
+            font-size: 21px;
+            font-weight: bold;
+        }
+
+        .logo span {
+            color: #ff4d4d;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #62ff9a;
+            font-size: 13px;
+        }
+
+        .status-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #32ff75;
+            box-shadow: 0 0 10px #32ff75;
+        }
+
+        main {
+            padding: 20px;
+        }
+
+        .title {
+            margin-bottom: 18px;
+        }
+
+        .title h1 {
+            font-size: 27px;
+            margin-bottom: 5px;
+        }
+
+        .title p {
+            color: #8d99ae;
+        }
+
+        /* =========================
+           STATISTICS
+        ========================= */
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .stat {
+            background: #101827;
+            border: 1px solid #202c40;
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .stat-title {
+            color: #8d99ae;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 25px;
+            font-weight: bold;
+        }
+
+        .fire {
+            color: #ff4d4d;
+        }
+
+        .earthquake {
+            color: #b58cff;
+        }
+
+        .cyclone {
+            color: #45b7ff;
+        }
+
+        .weather {
+            color: #ffd166;
+        }
+
+        .disaster {
+            color: #ff8c42;
+        }
+
+        /* =========================
+           CONTROLS
+        ========================= */
+
+        .controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+
+            background: #101827;
+            border: 1px solid #202c40;
+
+            padding: 12px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+        }
+
+        .layer-btn {
+            border: 1px solid #33415c;
+            background: #172235;
+            color: white;
+
+            padding: 9px 14px;
+            border-radius: 7px;
+
+            cursor: pointer;
+            font-weight: bold;
+
+            transition: 0.2s;
+        }
+
+        .layer-btn:hover {
+            background: #24334e;
+        }
+
+        .layer-btn.active {
+            background: #e63946;
+            border-color: #e63946;
+        }
+
+        /* WEATHER BUTTON */
+
+        .weather-btn.active {
+            background: #d9a900;
+            border-color: #ffd166;
+            color: #111;
+        }
+
+        .weather-btn.selecting {
+            background: #ffd166;
+            border-color: #fff0a8;
+            color: #111;
+            box-shadow: 0 0 15px rgba(255, 209, 102, 0.5);
+        }
+
+        .refresh-btn {
+            margin-left: auto;
+
+            background: #1f9d55;
+            border: none;
+            color: white;
+
+            padding: 9px 16px;
+            border-radius: 7px;
+
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .refresh-btn:hover {
+            background: #27b866;
+        }
+
+        /* =========================
+           WEATHER INSTRUCTION
+        ========================= */
+
+        .weather-instruction {
+            display: none;
+
+            margin-bottom: 15px;
+
+            background: #171c2b;
+            border: 1px solid #ffd166;
+
+            color: #ffd166;
+
+            padding: 13px 16px;
+
+            border-radius: 9px;
+
+            font-size: 14px;
+        }
+
+        .weather-instruction.visible {
+            display: block;
+        }
+
+        /* =========================
+           CONTENT
+        ========================= */
+
+        .content {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 15px;
+        }
+
+        .panel {
+            background: #101827;
+            border: 1px solid #202c40;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 14px 18px;
+
+            border-bottom: 1px solid #202c40;
+
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .panel-header h2 {
+            font-size: 16px;
+        }
+
+        #map {
+            width: 100%;
+            height: 680px;
+        }
+
+        /* =========================
+           WEATHER INFO PANEL
+        ========================= */
+
+        .weather-panel {
+            display: none;
+
+            margin-bottom: 15px;
+
+            background: linear-gradient(
+                135deg,
+                #151b2d,
+                #202033
+            );
+
+            border: 1px solid #ffd166;
+            border-radius: 12px;
+
+            padding: 20px;
+        }
+
+        .weather-panel.visible {
+            display: block;
+        }
+
+        .weather-title {
+            color: #ffd166;
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        .weather-panel-header .weather-title {
+         margin-bottom: 0;
+        }
+
+.weather-close-btn {
+    width: 34px;
+    height: 34px;
+
+    border: 1px solid #ff6b6b;
+    border-radius: 7px;
+
+    background: #2a1720;
+    color: #ff6b6b;
+
+    font-size: 20px;
+    font-weight: bold;
+
+    cursor: pointer;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    transition: 0.2s;
+}
+
+.weather-close-btn:hover {
+    background: #ff4d4d;
+    color: white;
+}
+
+        .weather-location {
+            color: #8d99ae;
+            font-size: 13px;
+            margin-bottom: 15px;
+        }
+
+        .weather-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+        }
+
+        .weather-card {
+            background: #0d1424;
+            border: 1px solid #30384d;
+            border-radius: 8px;
+            padding: 13px;
+        }
+
+        .weather-card-title {
+            color: #8d99ae;
+            font-size: 11px;
+            margin-bottom: 6px;
+        }
+
+        .weather-card-value {
+            color: white;
+            font-size: 19px;
+            font-weight: bold;
+        }
+
+        /* =========================
+           EVENT LIST
+        ========================= */
+
+        .event-list {
+            height: 680px;
+            overflow-y: auto;
+        }
+
+        .event-item {
+            padding: 14px;
+            border-bottom: 1px solid #202c40;
+            cursor: pointer;
+        }
+
+        .event-item:hover {
+            background: #172235;
+        }
+
+        .event-top {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 7px;
+            gap: 10px;
+        }
+
+        .event-type {
+            font-weight: bold;
+        }
+
+        .event-info {
+            color: #8d99ae;
+            font-size: 13px;
+            line-height: 1.7;
+        }
+
+        .badge {
+            padding: 4px 7px;
+            border-radius: 5px;
+            font-size: 10px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .badge-fire {
+            background: #ff3838;
+        }
+
+        .badge-earthquake {
+            background: #9b72ff;
+        }
+
+        .badge-cyclone {
+            background: #198cff;
+        }
+
+        .badge-weather {
+            background: #ffd166;
+            color: #111;
+        }
+
+        .badge-disaster {
+            background: #ff8c42;
+        }
+
+        .loading {
+            padding: 25px;
+            color: #8d99ae;
+            text-align: center;
+        }
+
+        .error-message {
+            padding: 20px;
+            color: #ff5555;
+            line-height: 1.7;
+        }
+
+        /* =========================
+           RESPONSIVE
+        ========================= */
+
+        @media(max-width: 1000px) {
+
+            .stats {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .content {
+                grid-template-columns: 1fr;
+            }
+
+            .event-list {
+                height: 450px;
+            }
+
+            .weather-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media(max-width: 600px) {
+
+            main {
+                padding: 10px;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
+
+            .refresh-btn {
+                margin-left: 0;
+            }
+
+            #map {
+                height: 500px;
+            }
+
+            header {
+                padding: 0 15px;
+            }
+
+            .logo {
+                font-size: 17px;
+            }
+
+            .weather-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+<header>
+
+    <div class="logo">
+        🚀 Space <span>Disaster</span> System
+    </div>
+
+    <div class="status">
+        <div class="status-dot"></div>
+        LIVE MONITORING
+    </div>
+
+</header>
+
+
+<main>
+
+    <section class="title">
+
+        <h1>
+            🌍 Global Disaster Intelligence
+        </h1>
+
+        <p>
+            Real-time visualization of satellite fires,
+            earthquakes, cyclones, weather and disasters.
+        </p>
+
+    </section>
+
+
+    <!-- =========================
+         STATISTICS
+    ========================= -->
+
+    <section class="stats">
+
+        <div class="stat">
+
+            <div class="stat-title">
+                🔥 FIRE EVENTS
+            </div>
+
+            <div
+                id="fireCount"
+                class="stat-value fire">
+                0
+            </div>
+
+        </div>
+
+
+        <div class="stat">
+
+            <div class="stat-title">
+                🌎 EARTHQUAKES
+            </div>
+
+            <div
+                id="earthquakeCount"
+                class="stat-value earthquake">
+                0
+            </div>
+
+        </div>
+
+
+        <div class="stat">
+
+            <div class="stat-title">
+                🌪️ CYCLONES
+            </div>
+
+            <div
+                id="cycloneCount"
+                class="stat-value cyclone">
+                0
+            </div>
+
+        </div>
+
+
+        <div class="stat">
+
+            <div class="stat-title">
+                🌦️ WEATHER
+            </div>
+
+            <div
+                id="weatherCount"
+                class="stat-value weather">
+                0
+            </div>
+
+        </div>
+
+
+        <div class="stat">
+
+            <div class="stat-title">
+                🚨 DISASTERS
+            </div>
+
+            <div
+                id="disasterCount"
+                class="stat-value disaster">
+                0
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================
+         CONTROLS
+    ========================= -->
+
+    <section class="controls">
+
+        <button
+            class="layer-btn active"
+            onclick="toggleLayer('fires', this)">
+            🔥 Fires
+        </button>
+
+
+        <button
+            class="layer-btn"
+            onclick="toggleLayer('earthquakes', this)">
+            🌎 Earthquakes
+        </button>
+
+
+        <button
+            class="layer-btn"
+            onclick="toggleLayer('cyclones', this)">
+            🌪️ Cyclones
+        </button>
+
+
+        <button
+            id="weatherButton"
+            class="layer-btn weather-btn"
+            onclick="toggleWeatherMode(this)">
+            🌦️ Weather
+        </button>
+
+
+        <button
+            class="layer-btn"
+            onclick="toggleLayer('disasters', this)">
+            🚨 Disasters
+        </button>
+
+
+        <button
+            class="refresh-btn"
+            onclick="loadAllData()">
+            ↻ Refresh All
+        </button>
+
+    </section>
+
+
+    <!-- =========================
+         WEATHER INSTRUCTION
+    ========================= -->
+
+    <div
+        id="weatherInstruction"
+        class="weather-instruction">
+
+        🌦️ <strong>Weather Selection Mode:</strong>
+        Click anywhere on the map to get live weather
+        for that exact location.
+
+    </div>
+
+
+    <!-- =========================
+         WEATHER DETAILS
+    ========================= -->
+
+    <section
+        id="weatherPanel"
+        class="weather-panel">
+
+        <div class="weather-title">
+            🌦️ Current Weather
+        </div>
+        <button
+            class="weather-close-btn"
+            onclick="closeWeatherData()"
+            title="Close weather data">
+            ✕
+        </button>
+
+        <div
+            id="weatherLocation"
+            class="weather-location">
+            Select a location on the map.
+        </div>
+
+
+        <div class="weather-grid">
+
+            <div class="weather-card">
+
+                <div class="weather-card-title">
+                    TEMPERATURE
+                </div>
+
+                <div
+                    id="weatherTemperature"
+                    class="weather-card-value">
+                    --
+                </div>
+
+            </div>
+
+
+            <div class="weather-card">
+
+                <div class="weather-card-title">
+                    FEELS LIKE
+                </div>
+
+                <div
+                    id="weatherFeelsLike"
+                    class="weather-card-value">
+                    --
+                </div>
+
+            </div>
+
+
+            <div class="weather-card">
+
+                <div class="weather-card-title">
+                    HUMIDITY
+                </div>
+
+                <div
+                    id="weatherHumidity"
+                    class="weather-card-value">
+                    --
+                </div>
+
+            </div>
+
+
+            <div class="weather-card">
+
+                <div class="weather-card-title">
+                    WIND SPEED
+                </div>
+
+                <div
+                    id="weatherWind"
+                    class="weather-card-value">
+                    --
+                </div>
+
+            </div>
+
+
+            <div class="weather-card">
+
+                <div class="weather-card-title">
+                    PRECIPITATION
+                </div>
+
+                <div
+                    id="weatherPrecipitation"
+                    class="weather-card-value">
+                    --
+                </div>
+
+            </div>
+
+
+            <div class="weather-card">
+
+                <div class="weather-card-title">
+                    RAIN
+                </div>
+
+                <div
+                    id="weatherRain"
+                    class="weather-card-value">
+                    --
+                </div>
+
+            </div>
+
+
+            <div class="weather-card">
+
+                <div class="weather-card-title">
+                    WEATHER CODE
+                </div>
+
+                <div
+                    id="weatherCode"
+                    class="weather-card-value">
+                    --
+                </div>
+
+            </div>
+
+
+            <div class="weather-card">
+
+                <div class="weather-card-title">
+                    WIND DIRECTION
+                </div>
+
+                <div
+                    id="weatherDirection"
+                    class="weather-card-value">
+                    --
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+
+    <!-- =========================
+         MAP + EVENTS
+    ========================= -->
+
+    <section class="content">
+
+        <div class="panel">
+
+            <div class="panel-header">
+
+                <h2>
+                    🗺️ Global Disaster Map
+                </h2>
+
+                <span id="mapStatus">
+                    Loading...
+                </span>
+
+            </div>
+
+            <div id="map"></div>
+
+        </div>
+
+
+        <div class="panel">
+
+            <div class="panel-header">
+
+                <h2>
+                    🚨 Disaster Events
+                </h2>
+
+            </div>
+
+            <div
+                id="eventList"
+                class="event-list">
+
+                <div class="loading">
+                    Loading disaster data...
+                </div>
+
+            </div>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+<script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+</script>
+
+
+<script>
+
+/* ============================================================
+   MAP
+============================================================ */
+
+const map = L.map("map").setView(
+    [20, 0],
+    2
+);
+
+
+L.tileLayer(
+    "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    {
+        maxZoom: 18,
+        attribution: "&copy; OpenStreetMap"
+    }
+).addTo(map);
+
+
+/* ============================================================
+   LAYERS
+============================================================ */
+
+const layers = {
+
+    fires: L.layerGroup().addTo(map),
+
+    earthquakes: L.layerGroup(),
+
+    cyclones: L.layerGroup(),
+
+    weather: L.layerGroup(),
+
+    disasters: L.layerGroup()
+
+};
+
+
+/* ============================================================
+   DATA
+============================================================ */
+
+let allEvents = {
+
+    fires: [],
+
+    earthquakes: [],
+
+    cyclones: [],
+
+    weather: [],
+
+    disasters: []
+
+};
+
+
+/* ============================================================
+   WEATHER MODE
+============================================================ */
+
+let weatherSelectionMode = false;
+
+let selectedWeatherMarker = null;
+
+
+/* ============================================================
+   WEATHER BUTTON
+============================================================ */
+
+function toggleWeatherMode(button) {
+
+    weatherSelectionMode =
+        !weatherSelectionMode;
+
+
+    if (weatherSelectionMode) {
+
+        /* Add weather layer */
+
+        map.addLayer(
+            layers.weather
+        );
+
+
+        button.classList.add(
+            "active"
+        );
+
+
+        button.classList.add(
+            "selecting"
+        );
+
+
+        document
+            .getElementById(
+                "weatherInstruction"
+            )
+            .classList.add(
+                "visible"
+            );
+
+
+        document.getElementById(
+            "mapStatus"
+        ).textContent =
+            "CLICK MAP FOR WEATHER";
+
+
+        map.getContainer().style.cursor =
+            "crosshair";
+
+
+        console.log(
+            "🌦️ Weather selection mode ON"
+        );
+
+    }
+
+    else {
+
+        map.removeLayer(
+            layers.weather
+        );
+
+
+        button.classList.remove(
+            "active"
+        );
+
+
+        button.classList.remove(
+            "selecting"
+        );
+
+
+        document
+            .getElementById(
+                "weatherInstruction"
+            )
+            .classList.remove(
+                "visible"
+            );
+
+
+        document.getElementById(
+            "mapStatus"
+        ).textContent =
+            "LIVE";
+
+
+        map.getContainer().style.cursor =
+            "";
+
+
+        console.log(
+            "🌦️ Weather selection mode OFF"
+        );
+
+    }
+
+}
+function closeWeatherData() {
+
+    // Hide weather panel
+    document
+        .getElementById("weatherPanel")
+        .classList.remove("visible");
+
+    // Remove weather marker(s) from map
+    layers.weather.clearLayers();
+
+    // Remove selected marker reference
+    selectedWeatherMarker = null;
+
+    // Clear selected weather data
+    allEvents.weather = [];
+
+    // Update count
+    updateStatistics();
+
+    // Update event list
+    updateEventList();
+
+    console.log("🌦️ Weather data closed");
+
+}
+
+/* ============================================================
+   MAP CLICK → WEATHER
+============================================================ */
+
+map.on(
+    "click",
+    async function(e) {
+
+        /* Only execute when Weather mode is active */
+
+        if (!weatherSelectionMode) {
+
+            return;
+
+        }
+
+
+        const lat =
+            e.latlng.lat;
+
+        const lon =
+            e.latlng.lng;
+
+
+        console.log(
+            "🌦️ Weather selected:",
+            lat,
+            lon
+        );
+
+
+        /* ----------------------------------------------------
+           Remove previous weather marker
+        ---------------------------------------------------- */
+
+        if (selectedWeatherMarker) {
+
+            layers.weather.removeLayer(
+                selectedWeatherMarker
+            );
+
+            selectedWeatherMarker = null;
+
+        }
+
+
+        /* ----------------------------------------------------
+           Create loading marker
+        ---------------------------------------------------- */
+
+        selectedWeatherMarker =
+            L.circleMarker(
+
+                [lat, lon],
+
+                {
+
+                    radius: 10,
+
+                    color: "#ffd166",
+
+                    fillColor: "#ffd166",
+
+                    fillOpacity: 0.9,
+
+                    weight: 3
+
+                }
+
+            ).addTo(
+                layers.weather
+            );
+
+
+        selectedWeatherMarker.bindPopup(
+
+            `
+            <div style="min-width:230px">
+
+                <h3 style="color:#d9a900">
+                    🌦️ Loading Weather...
+                </h3>
+
+                <hr>
+
+                <p>
+                    <b>📍 Location:</b><br>
+                    ${lat.toFixed(4)},
+                    ${lon.toFixed(4)}
+                </p>
+
+            </div>
+            `
+
+        ).openPopup();
+
+
+        document.getElementById(
+            "mapStatus"
+        ).textContent =
+            "FETCHING WEATHER...";
+
+
+        try {
+
+            /* ------------------------------------------------
+               IMPORTANT FIX:
+               Flask accepts latitude + longitude.
+               ------------------------------------------------ */
+
+            const url =
+                `http://localhost:5000/api/weather` +
+                `?latitude=${encodeURIComponent(lat)}` +
+                `&longitude=${encodeURIComponent(lon)}`;
+
+
+            console.log(
+                "🌦️ Request:",
+                url
+            );
+
+
+            const response =
+                await fetch(
+                    url,
+                    {
+                        cache: "no-store"
+                    }
+                );
+
+
+            if (!response.ok) {
+
+                throw new Error(
+                    `HTTP ${response.status}`
+                );
+
+            }
+
+
+            const result =
+                await response.json();
+
+
+            console.log(
+                "🌦️ Weather API response:",
+                result
+            );
+
+
+            if (
+                !result.success ||
+                !result.data
+            ) {
+
+                throw new Error(
+                    result.error ||
+                    "Weather data unavailable"
+                );
+
+            }
+
+
+            const weather =
+                result.data;
+
+
+            /* ------------------------------------------------
+               SAVE ONLY SELECTED WEATHER
+               ------------------------------------------------ */
+
+            allEvents.weather = [
+                weather
+            ];
+
+
+            /* ------------------------------------------------
+               UPDATE MARKER
+               ------------------------------------------------ */
+
+            selectedWeatherMarker.bindPopup(
+
+                `
+                <div style="min-width:270px">
+
+                    <h3 style="color:#d9a900">
+                        🌦️ Current Weather
+                    </h3>
+
+                    <hr>
+
+                    <p>
+                        <b>🌡️ Temperature:</b>
+                        ${weather.temperature ?? "-"} °C
+                    </p>
+
+                    <p>
+                        <b>🤗 Feels Like:</b>
+                        ${weather.apparent_temperature ?? "-"} °C
+                    </p>
+
+                    <p>
+                        <b>💧 Humidity:</b>
+                        ${weather.humidity ?? "-"} %
+                    </p>
+
+                    <p>
+                        <b>💨 Wind Speed:</b>
+                        ${weather.wind_speed ?? "-"} km/h
+                    </p>
+
+                    <p>
+                        <b>🧭 Wind Direction:</b>
+                        ${weather.wind_direction ?? "-"}°
+                    </p>
+
+                    <p>
+                        <b>🌧️ Precipitation:</b>
+                        ${weather.precipitation ?? "-"} mm
+                    </p>
+
+                    <p>
+                        <b>☔ Rain:</b>
+                        ${weather.rain ?? "-"} mm
+                    </p>
+
+                    <p>
+                        <b>🌤️ Weather Code:</b>
+                        ${weather.weather_code ?? "-"}
+                    </p>
+
+                    <hr>
+
+                    <p>
+                        <b>📍 Coordinates:</b><br>
+                        ${lat.toFixed(4)},
+                        ${lon.toFixed(4)}
+                    </p>
+
+                    <p>
+                        <b>Source:</b>
+                        Open-Meteo
+                    </p>
+
+                </div>
+                `
+
+            ).openPopup();
+
+
+            /* ------------------------------------------------
+               UPDATE WEATHER PANEL
+               ------------------------------------------------ */
+
+            updateWeatherPanel();
+
+
+            /* ------------------------------------------------
+               UPDATE STATISTICS
+               ------------------------------------------------ */
+
+            updateStatistics();
+
+
+            /* ------------------------------------------------
+               UPDATE EVENT LIST
+               ------------------------------------------------ */
+
+            updateEventList();
+
+
+            document.getElementById(
+                "mapStatus"
+            ).textContent =
+                "WEATHER LOADED";
+
+
+            console.log(
+                "✅ Weather loaded successfully"
+            );
+
+        }
+
+
+        catch(error) {
+
+            console.error(
+                "❌ Weather selection error:",
+                error
+            );
+
+
+            document.getElementById(
+                "mapStatus"
+            ).textContent =
+                "WEATHER ERROR";
+
+
+            selectedWeatherMarker.bindPopup(
+
+                `
+                <div style="min-width:230px">
+
+                    <h3 style="color:#ff5555">
+                        ❌ Weather Error
+                    </h3>
+
+                    <hr>
+
+                    <p>
+                        Unable to retrieve weather
+                        for this location.
+                    </p>
+
+                    <p>
+                        ${error.message}
+                    </p>
+
+                </div>
+                `
+
+            ).openPopup();
+
+        }
+
+    }
+);
+
+
+/* ============================================================
+   EXTRACT ARRAY
+============================================================ */
+
+function extractArray(data, type) {
+
+    if (Array.isArray(data)) {
+
+        return data;
+
+    }
+
+
+    if (
+        !data ||
+        typeof data !== "object"
+    ) {
+
+        return [];
+
+    }
+
+
+    if (Array.isArray(data.events)) {
+
+        return data.events;
+
+    }
+
+
+    if (Array.isArray(data.data)) {
+
+        return data.data;
+
+    }
+
+
+    if (Array.isArray(data.fire_events)) {
+
+        return data.fire_events;
+
+    }
+
+
+    if (Array.isArray(data.earthquakes)) {
+
+        return data.earthquakes;
+
+    }
+
+
+    if (Array.isArray(data.cyclones)) {
+
+        return data.cyclones;
+
+    }
+
+
+    if (
+        type === "cyclones" &&
+        data.cyclone &&
+        typeof data.cyclone === "object"
+    ) {
+
+        return [data.cyclone];
+
+    }
+
+
+    if (Array.isArray(data.disasters)) {
+
+        return data.disasters;
+
+    }
+
+
+    /* ========================================================
+       WEATHER
+    ======================================================== */
+
+    if (type === "weather") {
+
+        /*
+           Flask weather response:
+
+           {
+               success: true,
+               source: "Open-Meteo",
+               data: {
+                   type: "weather",
+                   latitude: ...,
+                   longitude: ...,
+                   temperature: ...
+               }
+           }
+        */
+
+        if (
+            data.data &&
+            typeof data.data === "object" &&
+            !Array.isArray(data.data)
+        ) {
+
+            return [
+                data.data
+            ];
+
+        }
+
+
+        /*
+           Fallback for direct weather object
+        */
+
+        if (
+            data.latitude !== undefined &&
+            data.longitude !== undefined
+        ) {
+
+            return [
+                data
+            ];
+
+        }
+
+
+        /*
+           Open-Meteo current structure
+        */
+
+        if (
+            data.current &&
+            typeof data.current === "object"
+        ) {
+
+            return [
+
+                {
+
+                    ...data.current,
+
+                    latitude:
+                        data.latitude,
+
+                    longitude:
+                        data.longitude,
+
+                    source:
+                        data.source ??
+                        "Open-Meteo"
+
+                }
+
+            ];
+
+        }
+
+    }
+
+
+    return [];
+
+}
+
+
+/* ============================================================
+   LATITUDE
+============================================================ */
+
+function getLatitude(event) {
+
+    return Number(
+
+        event.latitude ??
+        event.lat ??
+        event.Latitude ??
+        event.location?.latitude
+
+    );
+
+}
+
+
+/* ============================================================
+   LONGITUDE
+============================================================ */
+
+function getLongitude(event) {
+
+    return Number(
+
+        event.longitude ??
+        event.lon ??
+        event.lng ??
+        event.Longitude ??
+        event.location?.longitude
+
+    );
+
+}
+
+
+/* ============================================================
+   FIRE MARKERS
+   UNCHANGED
+============================================================ */
+
+function drawFires(events) {
+
+    layers.fires.clearLayers();
+
+    const displayEvents =
+        events.slice(0, 2000);
+
+
+    displayEvents.forEach(event => {
+
+        const lat =
+            getLatitude(event);
+
+        const lon =
+            getLongitude(event);
+
+
+        if (
+            !Number.isFinite(lat) ||
+            !Number.isFinite(lon)
+        ) {
+
+            return;
+
+        }
+
+
+        let color = "#54d68c";
+
+
+        const risk =
+            String(
+                event.risk_level ?? ""
+            ).toUpperCase();
+
+
+        if (risk === "CRITICAL") {
+
+            color = "#ff3838";
+
+        }
+
+        else if (risk === "HIGH") {
+
+            color = "#ff8c42";
+
+        }
+
+        else if (risk === "MODERATE") {
+
+            color = "#ffd166";
+
+        }
+
+
+        const score =
+            Number(
+                event.risk_score ?? 50
+            );
+
+
+        const marker =
+            L.circleMarker(
+
+                [lat, lon],
+
+                {
+
+                    radius:
+                        Math.max(
+                            4,
+                            Math.min(
+                                12,
+                                score / 7
+                            )
+                        ),
+
+                    color: color,
+
+                    fillColor: color,
+
+                    fillOpacity: 0.7,
+
+                    weight: 1
+
+                }
+
+            );
+
+
+        marker.bindPopup(`
+
+            <div style="min-width:220px">
+
+                <h3 style="color:${color}">
+                    🔥 Fire Event
+                </h3>
+
+                <hr>
+
+                <b>ID:</b>
+                ${event.fire_event_id ?? "-"}
+
+                <br>
+
+                <b>Risk:</b>
+                ${risk || "-"}
+
+                <br>
+
+                <b>Risk Score:</b>
+                ${event.risk_score ?? "-"}
+
+                <br>
+
+                <b>Detections:</b>
+                ${event.detections ?? "-"}
+
+                <br>
+
+                <b>Brightness:</b>
+                ${event.max_brightness ?? "-"}
+
+                <br>
+
+                <b>Location:</b>
+                ${lat.toFixed(4)},
+                ${lon.toFixed(4)}
+
+            </div>
+
+        `);
+
+
+        marker.addTo(
+            layers.fires
+        );
+
+    });
+
+}
+
+
+/* ============================================================
+   EARTHQUAKES
+   UNCHANGED
+============================================================ */
+
+function drawEarthquakes(events) {
+
+    layers.earthquakes.clearLayers();
+
+
+    events.forEach(event => {
+
+        const lat =
+            getLatitude(event);
+
+        const lon =
+            getLongitude(event);
+
+
+        if (
+            !Number.isFinite(lat) ||
+            !Number.isFinite(lon)
+        ) {
+
+            return;
+
+        }
+
+
+        const magnitude =
+            Number(
+
+                event.magnitude ??
+                event.mag ??
+                event.properties?.mag ??
+                1
+
+            );
+
+
+        const radius =
+            Math.max(
+                5,
+                Math.min(
+                    20,
+                    magnitude * 3
+                )
+            );
+
+
+        const marker =
+            L.circleMarker(
+
+                [lat, lon],
+
+                {
+
+                    radius: radius,
+
+                    color: "#b58cff",
+
+                    fillColor: "#9b72ff",
+
+                    fillOpacity: 0.7,
+
+                    weight: 2
+
+                }
+
+            );
+
+
+        marker.bindPopup(`
+
+            <div style="min-width:220px">
+
+                <h3 style="color:#9b72ff">
+                    🌎 Earthquake
+                </h3>
+
+                <hr>
+
+                <b>Magnitude:</b>
+                ${magnitude}
+
+                <br>
+
+                <b>Depth:</b>
+                ${
+                    event.depth ??
+                    event.properties?.depth ??
+                    "-"
+                }
+
+                <br>
+
+                <b>Location:</b>
+                ${lat.toFixed(4)},
+                ${lon.toFixed(4)}
+
+            </div>
+
+        `);
+
+
+        marker.addTo(
+            layers.earthquakes
+        );
+
+    });
+
+}
+
+
+/* ============================================================
+   CYCLONES
+   UNCHANGED
+============================================================ */
+
+function drawCyclones(events) {
+
+    layers.cyclones.clearLayers();
+
+    events.forEach(event => {
+
+        const lat = getLatitude(event);
+        const lon = getLongitude(event);
+
+        if (
+            !Number.isFinite(lat) ||
+            !Number.isFinite(lon)
+        ) {
+            return;
+        }
+
+        const name =
+            event.name ??
+            event.cyclone_name ??
+            "Unnamed Cyclone";
+
+        const severity =
+            event.severity ??
+            event.risk_level ??
+            event.category ??
+            "UNKNOWN";
+
+        const wind =
+            event.wind_speed ??
+            "-";
+
+        const pressure =
+            event.pressure ??
+            "-";
+
+        const basin =
+            event.basin ??
+            "Unknown";
+
+        const direction =
+            event.movement_direction ??
+            event.direction ??
+            "Unknown";
+
+        const movementSpeed =
+            event.movement_speed ??
+            "-";
+
+        const observationTime =
+            event.time ??
+            "-";
+        const lastUpdated =
+            event.last_updated ??
+            event.raw?.last_updated ??
+            "-";
+
+        const cycloneId =
+            event.id ??
+            event.atcf_id ??
+            "-";
+
+        const intensity =
+            event.intensity ??
+            event.raw?.cyclone_nature ??
+            "-";
+
+        const riskLevel =
+            event.risk_level ??
+            "-";
+
+        const atcfId =
+            event.atcf_id ??
+            event.raw?.atcf_id ??
+            "-";
+
+        const longAtcfId =
+            event.long_atcf_id ??
+            event.raw?.long_atcf_id ??
+            "-";
+
+        const transitionedFrom =
+            event.transitioned_from ??
+            event.raw?.transitioned_from ??
+            "Not available";
+
+
+        // ====================================================
+        // CYCLONE COLOR BASED ON SEVERITY
+        // ====================================================
+
+        let cycloneColor = "#45b7ff";
+
+        const severityText =
+            String(severity).toUpperCase();
+
+        if (severityText === "EXTREME") {
+
+            cycloneColor = "#ff1744";
+
+        }
+        else if (severityText === "SEVERE") {
+
+            cycloneColor = "#ff5252";
+
+        }
+        else if (severityText === "HIGH") {
+
+            cycloneColor = "#ff8c42";
+
+        }
+        else if (severityText === "MODERATE") {
+
+            cycloneColor = "#ffd166";
+
+        }
+        else if (severityText === "LOW") {
+
+            cycloneColor = "#54d68c";
+
+        }
+
+
+        // ====================================================
+        // MAIN CYCLONE MARKER
+        // ====================================================
+
+        const marker = L.circleMarker(
+            [lat, lon],
+            {
+                radius: 12,
+                color: cycloneColor,
+                fillColor: cycloneColor,
+                fillOpacity: 0.8,
+                weight: 3
+            }
+        );
+
+
+        // ====================================================
+        // MOVEMENT DIRECTION ARROW
+        // ====================================================
+
+        let directionAngle = null;
+
+        if (
+            typeof direction === "number"
+        ) {
+
+            directionAngle = direction;
+
+        }
+        else if (
+            !isNaN(Number(direction))
+        ) {
+
+            directionAngle =
+                Number(direction);
+
+        }
+
+
+        // Draw an arrow if direction is available
+        if (
+            directionAngle !== null
+        ) {
+
+            const arrowLength = 1.5;
+
+            const radians =
+                directionAngle *
+                Math.PI /
+                180;
+
+            const endLat =
+                lat +
+                arrowLength *
+                Math.cos(radians);
+
+            const endLon =
+                lon +
+                arrowLength *
+                Math.sin(radians) /
+                Math.cos(
+                    lat * Math.PI / 180
+                );
+
+
+            const movementLine =
+                L.polyline(
+                    [
+                        [lat, lon],
+                        [endLat, endLon]
+                    ],
+                    {
+                        color: cycloneColor,
+                        weight: 4,
+                        opacity: 0.9
+                    }
+                );
+
+
+            movementLine.bindTooltip(
+                `Moving ${direction}°`,
+                {
+                    sticky: true
+                }
+            );
+
+
+            movementLine.addTo(
+                layers.cyclones
+            );
+
+
+            // Arrow head
+            const arrowHeadSize = 0.35;
+
+            const leftAngle =
+                (directionAngle + 150) *
+                Math.PI /
+                180;
+
+            const rightAngle =
+                (directionAngle - 150) *
+                Math.PI /
+                180;
+
+
+            const leftLat =
+                endLat +
+                arrowHeadSize *
+                Math.cos(leftAngle);
+
+            const leftLon =
+                endLon +
+                arrowHeadSize *
+                Math.sin(leftAngle) /
+                Math.cos(
+                    endLat * Math.PI / 180
+                );
+
+
+            const rightLat =
+                endLat +
+                arrowHeadSize *
+                Math.cos(rightAngle);
+
+            const rightLon =
+                endLon +
+                arrowHeadSize *
+                Math.sin(rightAngle) /
+                Math.cos(
+                    endLat * Math.PI / 180
+                );
+
+
+            L.polyline(
+                [
+                    [endLat, endLon],
+                    [leftLat, leftLon]
+                ],
+                {
+                    color: cycloneColor,
+                    weight: 4
+                }
+            ).addTo(
+                layers.cyclones
+            );
+
+
+            L.polyline(
+                [
+                    [endLat, endLon],
+                    [rightLat, rightLon]
+                ],
+                {
+                    color: cycloneColor,
+                    weight: 4
+                }
+            ).addTo(
+                layers.cyclones
+            );
+
+        }
+
+
+        // ====================================================
+        // CYCLONE POPUP
+        // ====================================================
+
+        marker.bindPopup(`
+    <div class="cyclone-popup">
+
+        <h2>🌪️ ${event.name || "UNKNOWN"}</h2>
+
+        <hr>
+
+        <p><strong>🆔 Storm ID:</strong> ${event.id || "Not available"}</p>
+
+        <p><strong>⚠️ Severity:</strong> ${event.severity || "Not available"}</p>
+
+        <p><strong>📊 Risk Level:</strong> ${event.risk_level || "Not available"}</p>
+
+        <p><strong>🌀 Intensity:</strong> ${event.intensity || "Not available"}</p>
+
+        <p><strong>💨 Wind Speed:</strong>
+        ${event.wind_speed && event.wind_speed > 0
+        ? `${event.wind_speed} ${event.wind_unit || "knots"}`
+        : "Not available"
+        }</p>
+
+        <p><strong>📉 Pressure:</strong>
+        ${event.pressure && event.pressure > 0
+        ? `${event.pressure} hPa`
+        : "Not available"
+        }</p>
+
+        <p><strong>🧭 Moving Direction:</strong>
+        ${event.movement_direction || "Not available"}</p>
+
+        <p><strong>🚀 Movement Speed:</strong>
+        ${event.movement_speed != null
+            ? `${event.movement_speed} ${event.movement_speed_unit || "knots"}`
+                    : "Not available"
+        }</p>
+
+        <p><strong>🌊 Basin:</strong>
+        ${event.basin || "Not available"}</p>
+
+        <hr>
+
+        <p><strong>📍 Latitude:</strong>
+        ${event.latitude ?? "Not available"}</p>
+
+        <p><strong>📍 Longitude:</strong>
+        ${event.longitude ?? "Not available"}</p>
+
+        <p><strong>🎯 Exact Location:</strong><br>
+        ${event.latitude ?? "?"}, ${event.longitude ?? "?"}
+        </p>
+
+        <hr>
+
+        <p><strong>🕒 Observation:</strong><br>
+        ${
+            event.time
+                ? new Date(event.time).toLocaleString()
+                : "Not available"
+        }
+        </p>
+
+        <p><strong>🔄 Last Updated:</strong><br>
+        ${
+            event.last_updated
+                ? new Date(event.last_updated).toLocaleString()
+                : "Not available"
+        }
+        </p>
+
+        <hr>
+
+        <p><strong>🆔 ATCF ID:</strong>
+        ${event.atcf_id || event.id || "Not available"}</p>
+
+        <p><strong>🌐 Long ATCF ID:</strong>
+        ${event.long_atcf_id || "Not available"}</p>
+
+        <p><strong>🔁 Transitioned From:</strong>
+        ${event.transitioned_from || "Not available"}</p>
+
+        <hr>
+
+        <p><strong>📡 Source:</strong>
+        ${event.source || "Not available"}</p>
+
+    </div>
+`);
+
+
+        marker.addTo(
+            layers.cyclones
+        );
+
+    });
+
+}
+
+
+/* ============================================================
+   WEATHER DRAW
+   IMPORTANT:
+   NO AUTOMATIC WEATHER MARKER
+============================================================ */
+
+function drawWeather(events) {
+
+    /*
+       Do NOT automatically draw weather from
+       /api/weather on page load.
+
+       Weather should only appear after
+       the user clicks a location.
+    */
+
+    console.log(
+        "🌦️ Weather automatic drawing skipped."
+    );
+
+}
+
+
+/* ============================================================
+   DISASTERS
+   UNCHANGED
+============================================================ */
+
+function drawDisasters(events) {
+
+    layers.disasters.clearLayers();
+
+
+    events.forEach(event => {
+
+        const lat =
+            getLatitude(event);
+
+        const lon =
+            getLongitude(event);
+
+
+        if (
+            !Number.isFinite(lat) ||
+            !Number.isFinite(lon)
+        ) {
+
+            return;
+
+        }
+
+
+        const marker =
+            L.circleMarker(
+
+                [lat, lon],
+
+                {
+
+                    radius: 11,
+
+                    color: "#ff8c42",
+
+                    fillColor: "#ff8c42",
+
+                    fillOpacity: 0.8,
+
+                    weight: 2
+
+                }
+
+            );
+
+
+        marker.bindPopup(`
+
+            <div style="min-width:230px">
+
+                <h3 style="color:#ff8c42">
+                    🚨 Disaster
+                </h3>
+
+                <hr>
+
+                <b>Type:</b>
+                ${
+                    event.type ??
+                    event.disaster_type ??
+                    "Unknown"
+                }
+
+                <br>
+
+                <b>Name:</b>
+                ${event.name ?? "-"}
+
+                <br>
+
+                <b>Description:</b>
+                ${event.description ?? "-"}
+
+                <br>
+
+                <b>Location:</b>
+                ${lat.toFixed(4)},
+                ${lon.toFixed(4)}
+
+            </div>
+
+        `);
+
+
+        marker.addTo(
+            layers.disasters
+        );
+
+    });
+
+}
+
+
+/* ============================================================
+   WEATHER PANEL
+============================================================ */
+
+function updateWeatherPanel() {
+
+    const weather =
+        allEvents.weather[0];
+
+
+    const panel =
+        document.getElementById(
+            "weatherPanel"
+        );
+
+
+    if (!weather) {
+
+        panel.classList.remove(
+            "visible"
+        );
+
+        return;
+
+    }
+
+
+    panel.classList.add(
+        "visible"
+    );
+
+
+    const lat =
+        getLatitude(weather);
+
+    const lon =
+        getLongitude(weather);
+
+
+    document.getElementById(
+        "weatherLocation"
+    ).textContent =
+
+        `📍 Selected Location: ` +
+        `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+
+
+    document.getElementById(
+        "weatherTemperature"
+    ).textContent =
+
+        `${weather.temperature ?? "-"} °C`;
+
+
+    document.getElementById(
+        "weatherFeelsLike"
+    ).textContent =
+
+        `${weather.apparent_temperature ?? "-"} °C`;
+
+
+    document.getElementById(
+        "weatherHumidity"
+    ).textContent =
+
+        `${weather.humidity ?? "-"} %`;
+
+
+    document.getElementById(
+        "weatherWind"
+    ).textContent =
+
+        `${weather.wind_speed ?? "-"} km/h`;
+
+
+    document.getElementById(
+        "weatherPrecipitation"
+    ).textContent =
+
+        `${weather.precipitation ?? "-"} mm`;
+
+
+    document.getElementById(
+        "weatherRain"
+    ).textContent =
+
+        `${weather.rain ?? "-"} mm`;
+
+
+    document.getElementById(
+        "weatherCode"
+    ).textContent =
+
+        weather.weather_code ?? "-";
+
+
+    document.getElementById(
+        "weatherDirection"
+    ).textContent =
+
+        `${weather.wind_direction ?? "-"}°`;
+
+}
+
+
+/* ============================================================
+   NORMAL LAYER TOGGLE
+============================================================ */
+
+function toggleLayer(type, button) {
+
+    if (type === "weather") {
+
+        toggleWeatherMode(button);
+
+        return;
+
+    }
+
+
+    if (
+        map.hasLayer(
+            layers[type]
+        )
+    ) {
+
+        map.removeLayer(
+            layers[type]
+        );
+
+
+        button.classList.remove(
+            "active"
+        );
+
+    }
+
+    else {
+
+        map.addLayer(
+            layers[type]
+        );
+
+
+        button.classList.add(
+            "active"
+        );
+
+    }
+
+}
+
+
+/* ============================================================
+   STATISTICS
+============================================================ */
+
+function updateStatistics() {
+
+    document.getElementById(
+        "fireCount"
+    ).textContent =
+        allEvents.fires.length;
+
+
+    document.getElementById(
+        "earthquakeCount"
+    ).textContent =
+        allEvents.earthquakes.length;
+
+
+    document.getElementById(
+        "cycloneCount"
+    ).textContent =
+        allEvents.cyclones.length;
+
+
+    document.getElementById(
+        "weatherCount"
+    ).textContent =
+        allEvents.weather.length;
+
+
+    document.getElementById(
+        "disasterCount"
+    ).textContent =
+        allEvents.disasters.length;
+
+}
+
+
+/* ============================================================
+   EVENT LIST
+============================================================ */
+
+function updateEventList() {
+
+    const list =
+        document.getElementById(
+            "eventList"
+        );
+
+
+    const combined = [];
+
+
+    /* FIRES */
+
+    allEvents.fires
+        .slice(0, 15)
+        .forEach(event => {
+
+            combined.push({
+
+                type: "🔥 FIRE",
+
+                className: "badge-fire",
+
+                title:
+                    event.fire_event_id ??
+                    "Fire Event",
+
+                info:
+                    `Risk: ${
+                        event.risk_level ?? "-"
+                    }
+                    | Score: ${
+                        event.risk_score ?? "-"
+                    }
+                    | Detections: ${
+                        event.detections ?? "-"
+                    }`
+
+            });
+
+        });
+
+
+    /* EARTHQUAKES */
+
+    allEvents.earthquakes
+        .slice(0, 15)
+        .forEach(event => {
+
+            combined.push({
+
+                type: "🌎 EARTHQUAKE",
+
+                className:
+                    "badge-earthquake",
+
+                title:
+                    event.title ??
+                    event.name ??
+                    "Earthquake",
+
+                info:
+                    `Magnitude: ${
+                        event.magnitude ??
+                        event.mag ??
+                        event.properties?.mag ??
+                        "-"
+                    }`
+
+            });
+
+        });
+
+
+    /* CYCLONES */
+
+    allEvents.cyclones
+        .slice(0, 15)
+        .forEach(event => {
+
+            combined.push({
+
+                type: "🌪️ CYCLONE",
+
+                className:
+                    "badge-cyclone",
+
+                title:
+                    event.name ??
+                    event.cyclone_name ??
+                    "Cyclone",
+
+                info:
+                    `Wind: ${
+                        event.wind_speed ??
+                        event.windSpeed ??
+                        "-"
+                    } km/h`
+
+            });
+
+        });
+
+
+    /* WEATHER */
+
+    allEvents.weather
+        .forEach(event => {
+
+            const lat =
+                getLatitude(event);
+
+            const lon =
+                getLongitude(event);
+
+
+            combined.push({
+
+                type: "🌦️ WEATHER",
+
+                className: "badge-weather",
+
+                title:
+                    "Selected Location Weather",
+
+                info:
+                    `Location: ${
+                        lat.toFixed(4)
+                    }, ${
+                        lon.toFixed(4)
+                    }
+                    | Temperature: ${
+                        event.temperature ?? "-"
+                    } °C
+                    | Humidity: ${
+                        event.humidity ?? "-"
+                    } %`
+
+            });
+
+        });
+
+
+    /* DISASTERS */
+
+    allEvents.disasters
+        .slice(0, 15)
+        .forEach(event => {
+
+            combined.push({
+
+                type: "🚨 DISASTER",
+
+                className: "badge-disaster",
+
+                title:
+                    event.name ??
+                    event.type ??
+                    "Disaster",
+
+                info:
+                    event.description ??
+                    "Disaster event detected"
+
+            });
+
+        });
+
+
+    if (combined.length === 0) {
+
+        list.innerHTML = `
+
+            <div class="loading">
+                No disaster events available.
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+
+    list.innerHTML =
+
+        combined
+
+            .map(event => `
+
+                <div class="event-item">
+
+                    <div class="event-top">
+
+                        <div class="event-type">
+                            ${event.title}
+                        </div>
+
+                        <div
+                            class="badge ${event.className}">
+
+                            ${event.type}
+
+                        </div>
+
+                    </div>
+
+                    <div class="event-info">
+
+                        ${event.info}
+
+                    </div>
+
+                </div>
+
+            `)
+
+            .join("");
+
+}
+
+
+/* ============================================================
+   FETCH ENDPOINT
+============================================================ */
+
+async function fetchEndpoint(
+    endpoint,
+    type
+) {
+
+    try {
+
+        console.log(
+            `Fetching ${endpoint}...`
+        );
+
+
+        const response =
+            await fetch(
+
+                `http://localhost:5000${endpoint}`,
+
+                {
+                    cache: "no-store"
+                }
+
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                `HTTP ${response.status}`
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        console.log(
+            `API ${endpoint}:`,
+            data
+        );
+
+
+        return extractArray(
+            data,
+            type
+        );
+
+    }
+
+
+    catch(error) {
+
+        console.error(
+            `❌ ${endpoint}:`,
+            error
+        );
+
+
+        return [];
+
+    }
+
+}
+
+
+/* ============================================================
+   LOAD ALL DATA
+============================================================ */
+
+async function loadAllData() {
+
+    const status =
+        document.getElementById(
+            "mapStatus"
+        );
+
+
+    status.textContent =
+        "Loading...";
+
+
+    try {
+
+        /*
+           IMPORTANT:
+
+           Weather is NOT fetched here.
+
+           User selects weather by clicking the map.
+        */
+
+        const results =
+            await Promise.all([
+
+                fetchEndpoint(
+                    "/api/fire-events",
+                    "fires"
+                ),
+
+                fetchEndpoint(
+                    "/api/earthquakes",
+                    "earthquakes"
+                ),
+
+                fetchEndpoint(
+                    "/api/cyclones",
+                    "cyclones"
+                ),
+
+                fetchEndpoint(
+                    "/api/disasters",
+                    "disasters"
+                )
+
+            ]);
+
+
+        const [
+
+            fires,
+            earthquakes,
+            cyclones,
+            disasters
+
+        ] = results;
+
+
+        allEvents.fires =
+            fires;
+
+        allEvents.earthquakes =
+            earthquakes;
+
+        allEvents.cyclones =
+            cyclones;
+
+        allEvents.disasters =
+            disasters;
+
+
+        /*
+           Do NOT reset selected weather
+           during normal refresh.
+        */
+
+
+        console.log(
+            "================================"
+        );
+
+        console.log(
+            "🔥 Fires:",
+            fires.length
+        );
+
+        console.log(
+            "🌎 Earthquakes:",
+            earthquakes.length
+        );
+
+        console.log(
+            "🌪️ Cyclones:",
+            cyclones.length
+        );
+
+        console.log(
+            "🌦️ Selected Weather:",
+            allEvents.weather.length
+        );
+
+        console.log(
+            "🚨 Disasters:",
+            disasters.length
+        );
+
+        console.log(
+            "================================"
+        );
+
+
+        /* DRAW MAP */
+
+        drawFires(
+            fires
+        );
+
+
+        drawEarthquakes(
+            earthquakes
+        );
+
+
+        drawCyclones(
+            cyclones
+        );
+
+
+        drawDisasters(
+            disasters
+        );
+
+
+        /* IMPORTANT:
+           Do not draw automatic weather.
+        */
+
+
+        /* UPDATE UI */
+
+        updateStatistics();
+
+        updateWeatherPanel();
+
+        updateEventList();
+
+
+        status.textContent =
+            weatherSelectionMode
+                ? "CLICK MAP FOR WEATHER"
+                : "LIVE";
+
+    }
+
+
+    catch(error) {
+
+        console.error(
+            "❌ Loading error:",
+            error
+        );
+
+
+        status.textContent =
+            "ERROR";
+
+    }
+
+}
+
+
+/* ============================================================
+   START
+============================================================ */
+
+loadAllData();
+
+
+/* ============================================================
+   AUTO REFRESH
+============================================================ */
+
+setInterval(
+    loadAllData,
+    5 * 60 * 1000
+);
+
+</script>
+
+</body>
+
+</html>
