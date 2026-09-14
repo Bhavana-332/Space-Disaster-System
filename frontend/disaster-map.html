@@ -1189,7 +1189,7 @@ map.on(
                ------------------------------------------------ */
 
             const url =
-                `http://localhost:5000/api/weather` +
+                `/api/weather` +
                 `?latitude=${encodeURIComponent(lat)}` +
                 `&longitude=${encodeURIComponent(lon)}`;
 
@@ -2821,7 +2821,7 @@ async function fetchEndpoint(
         const response =
             await fetch(
 
-                `http://localhost:5000${endpoint}`,
+                `${endpoint}`,
 
                 {
                     cache: "no-store"
