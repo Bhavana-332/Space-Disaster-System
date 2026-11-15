@@ -54,37 +54,203 @@ def safe_float(value, default=0):
         return float(value)
     except:
         return default
-def get_movement_direction(storm):
-    """
-    Get cyclone movement direction from ATCF data.
-    """
+def direction_to_degrees(value):
+    """Convert numeric or compass direction to degrees clockwise from north."""
+    if value in (None, "", -9999, "-9999"):
+        return None
 
-    value = (
+    try:
+        number = float(value)
+        if 0 <= number <= 360:
+            return round(number, 1)
+    except (TypeError, ValueError):
+        pass
+
+    text = str(value).strip().upper().replace("-", " ")
+    compass = {
+        "N": 0, "NNE": 22.5, "NE": 45, "ENE": 67.5,
+        "E": 90, "ESE": 112.5, "SE": 135, "SSE": 157.5,
+        "S": 180, "SSW": 202.5, "SW": 225, "WSW": 247.5,
+        "W": 270, "WNW": 292.5, "NW": 315, "NNW": 337.5
+    }
+    return compass.get(text)
+
+
+def degrees_to_compass(degrees_value):
+    """Convert bearing degrees to an 8/16-point compass label."""
+    if degrees_value is None:
+        return "Not available"
+
+    directions = [
+        "N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE",
+        "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"
+    ]
+    index = int((float(degrees_value) + 11.25) / 22.5) % 16
+    return directions[index]
+
+
+def parse_atcf_coordinate(value, is_latitude=True):
+    """Parse ATCF coordinates such as 176N / 849E into decimal degrees."""
+    if value is None:
+        return None
+
+    text = str(value).strip().upper()
+    if not text:
+        return None
+
+    hemisphere = text[-1] if text[-1] in "NSEW" else None
+    number_text = text[:-1] if hemisphere else text
+
+    try:
+        number = float(number_text)
+    except ValueError:
+        return None
+
+    # Standard ATCF uses tenths of degrees.
+    if abs(number) > (90 if is_latitude else 180):
+        number /= 10.0
+
+    if hemisphere in ("S", "W"):
+        number = -abs(number)
+
+    return number
+
+
+def extract_atcf_track_movement(storm):
+    """
+    Read the storm ATCF sector file and return:
+      (movement_direction_degrees, movement_speed_knots, observed_track)
+
+    The observed_track contains recent BEST-track tau-0 positions so the
+    frontend can draw the dashed historical path behind the cyclone and a
+    heading arrow from the latest position.
+    """
+    url = storm.get("atcf_sector_file") or storm.get("interp_sector_file")
+    if not url or not str(url).lower().startswith(("http://", "https://")):
+        return None, None, []
+
+    try:
+        response = requests.get(
+            str(url),
+            timeout=15,
+            headers={"User-Agent": "SpaceDisasterSystem/1.0"}
+        )
+        response.raise_for_status()
+    except requests.RequestException as exc:
+        print(f"⚠️ ATCF track fetch failed: {exc}")
+        return None, None, []
+
+    import csv
+    from io import StringIO
+
+    rows = []
+    try:
+        reader = csv.reader(StringIO(response.text))
+        for row in reader:
+            if len(row) < 28:
+                continue
+
+            # ATCF fields: 2 DTG, 4 TECH, 5 TAU, 6 LAT, 7 LON,
+            # 26 DIR and 27 SPEED.
+            tech = row[4].strip().upper()
+            tau = row[5].strip()
+            lat = parse_atcf_coordinate(row[6], True)
+            lon = parse_atcf_coordinate(row[7], False)
+            if lat is None or lon is None:
+                continue
+
+            try:
+                dtg = datetime.strptime(row[2].strip(), "%Y%m%d%H")
+            except ValueError:
+                continue
+
+            rows.append({
+                "dtg": dtg,
+                "tech": tech,
+                "tau": tau,
+                "lat": lat,
+                "lon": lon,
+                "direction": direction_to_degrees(row[26].strip()),
+                "speed": safe_float(row[27].strip(), None)
+            })
+    except Exception as exc:
+        print(f"⚠️ ATCF track parsing failed: {exc}")
+        return None, None, []
+
+    if not rows:
+        return None, None, []
+
+    # Prefer BEST tau-0 records: these are observed/current storm positions.
+    preferred = [r for r in rows if r["tech"] == "BEST" and r["tau"] == "0"]
+    if len(preferred) < 2:
+        preferred = [r for r in rows if r["tau"] == "0"]
+    preferred.sort(key=lambda r: r["dtg"])
+
+    # Keep a compact recent track for the map.
+    track_rows = preferred[-12:] if preferred else []
+    observed_track = [
+        {
+            "latitude": round(r["lat"], 4),
+            "longitude": round(r["lon"], 4),
+            "time": r["dtg"].isoformat()
+        }
+        for r in track_rows
+    ]
+
+    latest = preferred[-1] if preferred else max(rows, key=lambda r: r["dtg"])
+
+    if latest["direction"] is not None:
+        return latest["direction"], latest["speed"], observed_track
+
+    if len(preferred) >= 2:
+        previous = preferred[-2]
+        lat1 = radians(previous["lat"])
+        lat2 = radians(latest["lat"])
+        delta_lon = radians(latest["lon"] - previous["lon"])
+
+        x = sin(delta_lon) * cos(lat2)
+        y = cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(delta_lon)
+        bearing = (degrees(atan2(x, y)) + 360) % 360
+
+        speed = latest["speed"]
+        if speed is None:
+            distance_nm = 60 * degrees(
+                atan2(
+                    sqrt(
+                        (cos(lat2) * sin(delta_lon)) ** 2 +
+                        (cos(lat1) * sin(lat2) - sin(lat1) * cos(lat2) * cos(delta_lon)) ** 2
+                    ),
+                    sin(lat1) * sin(lat2) + cos(lat1) * cos(lat2) * cos(delta_lon)
+                )
+            )
+            hours = (latest["dtg"] - previous["dtg"]).total_seconds() / 3600
+            if hours > 0:
+                speed = distance_nm / hours
+
+        return round(bearing, 1), round(speed, 1) if speed is not None else None, observed_track
+
+    return None, None, observed_track
+
+def get_movement_direction(storm):
+    """Get cyclone movement direction, preferring ATCF track information."""
+    direction = direction_to_degrees(
         storm.get("movedir")
         or storm.get("movement_direction")
         or storm.get("motion_direction")
     )
 
-    if value in (None, "", -9999, "-9999"):
-        return "Not available"
-
-    return str(value)
+    return direction
 
 
 def get_movement_speed(storm):
-    """
-    Get cyclone movement speed from ATCF data.
-    """
-
+    """Get cyclone movement speed from direct ATCF metadata."""
     value = (
         storm.get("movespeed")
         or storm.get("movement_speed")
         or storm.get("motion_speed")
     )
-
     if value in (None, "", -9999, "-9999"):
         return None
-
     return safe_float(value, None)
 
 
@@ -800,8 +966,21 @@ def cyclones():
             # ------------------------------------------------
 
             movement_direction = get_movement_direction(storm)
-
             movement_speed = get_movement_speed(storm)
+
+            # KNACKWX exposes an ATCF sector-file URL. Use it when the v2
+            # metadata does not already contain motion information.
+            track_direction, track_speed, movement_track = extract_atcf_track_movement(storm)
+
+            if movement_direction is None:
+                movement_direction = track_direction
+
+            if movement_speed is None:
+                movement_speed = track_speed
+
+            if movement_direction is None:
+                movement_direction = "Not available"
+
             """
             movement_direction = (
 
@@ -907,8 +1086,14 @@ def cyclones():
 
                 # Movement
                 "movement_direction": movement_direction,
+                "movement_direction_label": (
+                    f"{degrees_to_compass(movement_direction)} ({movement_direction:.1f}°)"
+                    if isinstance(movement_direction, (int, float))
+                    else str(movement_direction)
+                ),
                 "movement_speed": movement_speed,
                 "movement_speed_unit": "knots",
+                "movement_track": movement_track,
 
                 # Time
                 "time": observation_time,

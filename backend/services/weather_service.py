@@ -5,63 +5,161 @@ def get_weather(latitude, longitude):
 
     print("Requesting weather data...")
 
-    url = "https://api.open-meteo.com/v1/forecast"
+    url = (
+        "https://api.open-meteo.com/v1/forecast"
+    )
 
     params = {
-        "latitude": latitude,
-        "longitude": longitude,
+
+        "latitude":
+            latitude,
+
+        "longitude":
+            longitude,
+
         "current": [
+
             "temperature_2m",
+
             "relative_humidity_2m",
+
             "apparent_temperature",
+
             "precipitation",
+
             "rain",
+
             "weather_code",
+
             "wind_speed_10m",
+
             "wind_direction_10m"
+
         ],
+
         "hourly": [
+
             "temperature_2m",
+
             "precipitation_probability",
+
             "precipitation",
+
             "rain",
+
             "wind_speed_10m"
+
         ],
-        "forecast_days": 3,
-        "timezone": "auto"
+
+        "forecast_days":
+            3,
+
+        "timezone":
+            "auto"
     }
 
-    response = requests.get(url, params=params)
+    try:
 
-    if response.status_code != 200:
-        print("Weather API failed.")
-        print("Status code:", response.status_code)
+        response = requests.get(
+            url,
+            params=params,
+            timeout=20
+        )
+
+        response.raise_for_status()
+
+        data = response.json()
+
+    except requests.RequestException as e:
+
+        print(
+            "Weather API request failed:",
+            str(e)
+        )
+
         return None
 
-    data = response.json()
+    except ValueError as e:
 
-    current = data["current"]
+        print(
+            "Weather API returned invalid JSON:",
+            str(e)
+        )
+
+        return None
+
+    current = data.get(
+        "current",
+        {}
+    )
 
     weather = {
-        "type": "weather",
 
-    "latitude": latitude,
-    "longitude": longitude,
+        "type":
+            "weather",
 
-    # Current conditions
-    "temperature": current["temperature_2m"],
-    "humidity": current["relative_humidity_2m"],
-    "apparent_temperature": current["apparent_temperature"],
-    "precipitation": current["precipitation"],
-    "rain": current["rain"],
-    "weather_code": current["weather_code"],
-    "wind_speed": current["wind_speed_10m"],
-    "wind_direction": current["wind_direction_10m"],
+        "latitude":
+            latitude,
 
-    # Forecast
-    "forecast": data["hourly"],
+        "longitude":
+            longitude,
 
-    "source": "Open-Meteo"
+        # Current conditions
+        "temperature":
+            current.get(
+                "temperature_2m"
+            ),
+
+        "humidity":
+            current.get(
+                "relative_humidity_2m"
+            ),
+
+        "apparent_temperature":
+            current.get(
+                "apparent_temperature"
+            ),
+
+        "precipitation":
+            current.get(
+                "precipitation",
+                0
+            ),
+
+        "rain":
+            current.get(
+                "rain",
+                0
+            ),
+
+        "weather_code":
+            current.get(
+                "weather_code"
+            ),
+
+        "wind_speed":
+            current.get(
+                "wind_speed_10m"
+            ),
+
+        "wind_direction":
+            current.get(
+                "wind_direction_10m"
+            ),
+
+        # Forecast
+        "forecast":
+            data.get(
+                "hourly",
+                {}
+            ),
+
+        "source":
+            "Open-Meteo"
     }
 
     return weather
+# Stage 3 note:
+# The existing 3-day hourly forecast already provides the rainfall,
+# precipitation probability, and temperature data used by the
+# Stage 3 risk engine.
